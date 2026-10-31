@@ -186,8 +186,6 @@ namespace StudentEmailApp.Forms
 
         #endregion
 
-        #region 2. Middle Section (Email Generation & Original Select All)
-
         #region 2. Middle Section (Optimized Email Generation with Dictionary Caching)
 
         private void btnCreateEmails_Click(object sender, EventArgs e)
