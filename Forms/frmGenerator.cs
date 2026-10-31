@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Printing;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
@@ -17,11 +20,14 @@ namespace StudentEmailApp.Forms
         private readonly string _targetTitle;
         private readonly EmailGeneratorService _emailService = new();
 
+        // Print Report pagination tracking
+        private int _printRowIndex = 0;
+        private int _printPageNumber = 1;
+        private List<DataGridViewRow> _printRows = new();
+
         public frmGenerator(string targetTable, string targetTitle)
         {
             InitializeComponent();
-
-            // Register encoding provider for ExcelDataReader compatibility
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
             _targetTable = string.IsNullOrWhiteSpace(targetTable) ? "mails" : targetTable;
@@ -30,39 +36,62 @@ namespace StudentEmailApp.Forms
 
         private void frmGenerator_Load(object sender, EventArgs e)
         {
-            lblTargetTitle.Text = $"Email Generator — {_targetTitle}";
+            lblTargetTitle.Text = $"Email Generator Studio — {_targetTitle}";
             lblTargetTableInfo.Text = $"Target Database Table: dbo.[{_targetTable}]";
-            UpdateSelectionSummary();
+
+            // Initialize Footer StatusStrip
+            lblStatusUser.Text = $"👤 Logged in User: {UserSession.CurrentUsername}";
+            lblStatusTable.Text = $"🎯 Target: dbo.[{_targetTable}]";
+            lblStatusAction.Text = "Ready. Select an Excel file to begin.";
+
+            UpdateOriginalSummary();
+            UpdateGeneratedSummary();
         }
 
-        #region 1. Excel Upload (Populates dgvOriginal)
-        private void btnUploadExcel_Click(object sender, EventArgs e)
+        #region 1. Top Section (Excel Browse, Load, and Clear)
+
+        private void btnBrowse_Click(object sender, EventArgs e)
         {
             using var ofd = new OpenFileDialog
             {
-                Filter = "Excel & CSV Files (*.xlsx;*.xls;*.csv)|*.xlsx;*.xls;*.csv|All Files (*.*)|*.*",
+                Filter = "Excel & CSV Files (*.xlsx;*.xls;*.csv)|*.xlsx;*.xls;*.csv|Excel Files (*.xlsx)|*.xlsx|All Files (*.*)|*.*",
                 Title = "Select Excel Student List"
             };
 
-            if (ofd.ShowDialog() != DialogResult.OK)
+            if (ofd.ShowDialog() == DialogResult.OK)
+            {
+                txtExcelPath.Text = ofd.FileName;
+                lblStatusAction.Text = $"Selected: {Path.GetFileName(ofd.FileName)}. Click 'Load Sheet' to import.";
+            }
+        }
+
+        private void btnLoadSheet_Click(object sender, EventArgs e)
+        {
+            string filePath = txtExcelPath.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            {
+                MessageBox.Show("Please click 'Browse' and select a valid Excel or CSV file first.", 
+                    "File Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
+            }
 
             try
             {
-                btnUploadExcel.Enabled = false;
-                btnUploadExcel.Text = "Reading...";
+                btnLoadSheet.Enabled = false;
+                btnLoadSheet.Text = "Loading...";
+                lblStatusAction.Text = "Reading Excel file...";
                 dgvOriginal.Rows.Clear();
-                dgvGenerated.Rows.Clear();
 
                 int importedCount = 0;
 
-                using (var stream = File.Open(ofd.FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 using (var reader = ExcelReaderFactory.CreateReader(stream))
                 {
                     var result = reader.AsDataSet();
                     if (result.Tables.Count == 0 || result.Tables[0].Rows.Count == 0)
                     {
-                        MessageBox.Show("The Excel file has no records.", "Empty File", 
+                        MessageBox.Show("The selected Excel file is empty.", "Empty File", 
                             MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
@@ -74,10 +103,10 @@ namespace StudentEmailApp.Forms
                     {
                         if (row.ItemArray.Length < 2) continue;
 
-                        string col0 = row[0]?.ToString()?.Trim() ?? ""; // ID / Code / Col 0
-                        string col1 = row[1]?.ToString()?.Trim() ?? ""; // Full English Name / Col 1
+                        string col0 = row[0]?.ToString()?.Trim() ?? ""; // ID / Code (Column Index 0)
+                        string col1 = row[1]?.ToString()?.Trim() ?? ""; // Full English Name (Column Index 1)
 
-                        // Check if first row is a header
+                        // Check if row 1 is a header
                         if (isFirstRow)
                         {
                             isFirstRow = false;
@@ -89,7 +118,6 @@ namespace StudentEmailApp.Forms
                             }
                         }
 
-                        // Skip rows where the full name column is blank
                         if (string.IsNullOrWhiteSpace(col1))
                             continue;
 
@@ -97,57 +125,80 @@ namespace StudentEmailApp.Forms
                         dgvOriginal.Rows.Add(
                             true,          // colOrigSelect (checked by default)
                             importedCount, // colOrigIndex
-                            col0,          // colOrigId (Column 0)
-                            col1,          // colOrigFullName (Column 1)
+                            col0,          // colOrigId (Column Index 0)
+                            col1,          // colOrigFullName (Column Index 1)
                             "Ready"        // colOrigStatus
                         );
                     }
                 }
 
-                chkSelectAll.Checked = true;
-                UpdateSelectionSummary();
+                chkSelectAllOrig.Checked = true;
+                UpdateOriginalSummary();
                 btnCreateEmails.Enabled = importedCount > 0;
-                btnSaveToDb.Enabled = false;
 
-                // Insert log into SystemLogs
+                // Log upload in SystemLogs
                 DbHelper.LogAction(
                     UserSession.CurrentUsername,
                     $"{UserSession.CurrentUsername} uploaded an Excel file with {importedCount} records for {_targetTable}"
                 );
 
+                lblStatusAction.Text = $"Loaded {importedCount} students into Raw Data grid.";
+
                 MessageBox.Show(
-                    $"Imported {importedCount} students into 'Original Data' (Left Panel).\nSelect the desired rows and click 'Create Emails' to generate addresses into the Right Panel.",
-                    "Upload Successful",
+                    $"Successfully loaded {importedCount} students from '{Path.GetFileName(filePath)}'.\nClick 'Create selected Mails' to generate email addresses.",
+                    "Load Successful",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information
                 );
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to read Excel file:\n{ex.Message}", "Error", 
+                MessageBox.Show($"Failed to load file:\n{ex.Message}", "Error Loading Sheet", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
+                lblStatusAction.Text = "Error loading Excel file.";
             }
             finally
             {
-                btnUploadExcel.Enabled = true;
-                btnUploadExcel.Text = "📁 Upload Excel";
+                btnLoadSheet.Enabled = true;
+                btnLoadSheet.Text = "📥 Load Sheet";
             }
         }
+
+        private void btnClearOriginal_Click(object sender, EventArgs e)
+        {
+            if (dgvOriginal.Rows.Count == 0) return;
+
+            var confirm = MessageBox.Show(
+                "Are you sure you want to clear all loaded student records from the top grid?",
+                "Confirm Clear",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+
+            if (confirm == DialogResult.Yes)
+            {
+                dgvOriginal.Rows.Clear();
+                txtExcelPath.Clear();
+                UpdateOriginalSummary();
+                lblStatusAction.Text = "Loaded students list cleared.";
+            }
+        }
+
         #endregion
 
-        #region 2. Email Generation Logic (Reads dgvOriginal -> Writes dgvGenerated)
+        #region 2. Middle Section (Email Generation & Original Select All)
+
         private void btnCreateEmails_Click(object sender, EventArgs e)
         {
             if (dgvOriginal.Rows.Count == 0)
             {
-                MessageBox.Show("Please upload an Excel file first.", "No Data", 
+                MessageBox.Show("Please load an Excel sheet first.", "No Data", 
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             _emailService.EmailDomain = txtDomain.Text.Trim();
-            _emailService.ResetCache(); // Reset in-memory sequence cache for fresh batch
-            dgvGenerated.Rows.Clear();  // Clear previous generated data
+            _emailService.ResetCache(); // Reset in-memory counter cache for fresh generation batch
 
             int generatedCount = 0;
             btnCreateEmails.Enabled = false;
@@ -155,13 +206,14 @@ namespace StudentEmailApp.Forms
             progressBar.Visible = true;
             progressBar.Value = 0;
             progressBar.Maximum = dgvOriginal.Rows.Count;
+            lblStatusAction.Text = "Generating unique sequential emails...";
 
             try
             {
                 using var conn = DbHelper.GetConnection();
                 conn.Open();
 
-                // Loop ONLY through checked rows in dgvOriginal
+                // Loop ONLY through checked rows in dgvOriginal (Top Grid)
                 foreach (DataGridViewRow rawRow in dgvOriginal.Rows)
                 {
                     progressBar.Value++;
@@ -176,10 +228,9 @@ namespace StudentEmailApp.Forms
                     if (string.IsNullOrWhiteSpace(fullName))
                         continue;
 
-                    // Parse full name:
-                    // 1. Split string by spaces (e.g., "Ganna Reda Ibrahim Atiya")
-                    // 2. Extract 1st letter of 1st name + 1st letter of 2nd name in lowercase ("gr")
-                    // 3. Query DB for max sequence for "gr%". Starts at gr1111 or increments in memory
+                    // String parsing & auto-increment:
+                    // Splits full name by spaces, extracts initials of 1st and 2nd words,
+                    // queries DB for highest sequence (e.g. gr1115), and increments sequentially in memory
                     string email = _emailService.GenerateEmailFromFullName(
                         fullName,
                         _targetTable,
@@ -190,9 +241,10 @@ namespace StudentEmailApp.Forms
 
                     generatedCount++;
 
-                    // Add generated result to dgvGenerated (Right Panel)
+                    // Add generated row to dgvGenerated (Bottom Grid)
                     int genIndex = dgvGenerated.Rows.Add(
-                        generatedCount,
+                        true,          // colGenSelect (checked by default)
+                        dgvGenerated.Rows.Count + 1,
                         id,
                         fullName,
                         firstName,
@@ -201,10 +253,8 @@ namespace StudentEmailApp.Forms
                         "Generated"
                     );
 
-                    // Style generated row with light green background
+                    // Visual highlight
                     dgvGenerated.Rows[genIndex].DefaultCellStyle.BackColor = Color.FromArgb(240, 253, 244);
-
-                    // Update status in original grid
                     rawRow.Cells["colOrigStatus"].Value = "Processed";
                     rawRow.DefaultCellStyle.BackColor = Color.FromArgb(241, 245, 249);
                 }
@@ -215,12 +265,13 @@ namespace StudentEmailApp.Forms
                     $"{UserSession.CurrentUsername} generated {generatedCount} emails for {_targetTable}"
                 );
 
-                btnSaveToDb.Enabled = generatedCount > 0;
-                lblGenCount.Text = $"({generatedCount} generated)";
-                lblSelectionStats.Text = $"Generated {generatedCount} sequential emails in Right Panel. Ready to save.";
+                chkSelectAllGen.Checked = true;
+                UpdateGeneratedSummary();
+
+                lblStatusAction.Text = $"Generated {generatedCount} sequential emails. Ready to Save, Export, or Print.";
 
                 MessageBox.Show(
-                    $"Successfully generated {generatedCount} sequential emails into 'dgvGenerated'!\nAll duplicate initials in this batch were incremented sequentially in memory without collisions.",
+                    $"Successfully generated {generatedCount} sequential emails!\nAdded to the bottom 'Generated Student Mails' list.",
                     "Emails Generated",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information
@@ -230,28 +281,74 @@ namespace StudentEmailApp.Forms
             {
                 MessageBox.Show($"Error generating emails:\n{ex.Message}", "Generation Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
+                lblStatusAction.Text = "Error generating emails.";
             }
             finally
             {
                 progressBar.Visible = false;
                 btnCreateEmails.Enabled = true;
-                btnCreateEmails.Text = "⚡ Create Emails →";
+                btnCreateEmails.Text = "⚡ Create selected Mails ↓";
             }
         }
+
+        private void chkSelectAllOrig_CheckedChanged(object sender, EventArgs e)
+        {
+            bool check = chkSelectAllOrig.Checked;
+            foreach (DataGridViewRow row in dgvOriginal.Rows)
+            {
+                row.Cells["colOrigSelect"].Value = check;
+            }
+            UpdateOriginalSummary();
+        }
+
+        private void dgvOriginal_CellValueChanged(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex >= 0 && e.ColumnIndex == colOrigSelect.Index)
+            {
+                UpdateOriginalSummary();
+            }
+        }
+
+        private void dgvOriginal_CurrentCellDirtyStateChanged(object sender, EventArgs e)
+        {
+            if (dgvOriginal.IsCurrentCellDirty && dgvOriginal.CurrentCell is DataGridViewCheckBoxCell)
+            {
+                dgvOriginal.CommitEdit(DataGridViewDataErrorContexts.Commit);
+            }
+        }
+
+        private void UpdateOriginalSummary()
+        {
+            int total = dgvOriginal.Rows.Count;
+            int selected = 0;
+
+            foreach (DataGridViewRow row in dgvOriginal.Rows)
+            {
+                if (Convert.ToBoolean(row.Cells["colOrigSelect"].Value ?? false))
+                    selected++;
+            }
+
+            lblOriginalCount.Text = $"Loaded Students: {total} ({selected} selected)";
+            btnCreateEmails.Enabled = selected > 0;
+        }
+
         #endregion
 
-        #region 3. Save to Database (Reads ONLY from dgvGenerated)
+        #region 3. Bottom Section (Save to DB, Export CSV, Show Report, Clear)
+
         private void btnSaveToDb_Click(object sender, EventArgs e)
         {
-            if (dgvGenerated.Rows.Count == 0)
+            var selectedRows = GetSelectedGeneratedRows();
+
+            if (selectedRows.Count == 0)
             {
-                MessageBox.Show("There are no generated records to save.", "Notice", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please select at least one generated email row to save.", 
+                    "No Rows Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             var confirm = MessageBox.Show(
-                $"Are you sure you want to save the {dgvGenerated.Rows.Count} generated records to table '{_targetTable}'?",
+                $"Are you sure you want to save {selectedRows.Count} selected emails to database table '{_targetTable}'?",
                 "Confirm Save",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question
@@ -264,7 +361,8 @@ namespace StudentEmailApp.Forms
             btnSaveToDb.Text = "Saving...";
             progressBar.Visible = true;
             progressBar.Value = 0;
-            progressBar.Maximum = dgvGenerated.Rows.Count;
+            progressBar.Maximum = selectedRows.Count;
+            lblStatusAction.Text = "Saving selected records to SQL Server...";
 
             int savedCount = 0;
 
@@ -280,7 +378,6 @@ namespace StudentEmailApp.Forms
                 using var trans = conn.BeginTransaction();
                 try
                 {
-                    // Save to target SQL Server table
                     string insertSql = $@"
                         INSERT INTO dbo.[{validatedTable}] 
                             (first_name, last_name, mail, id, create_date, user_name) 
@@ -294,15 +391,14 @@ namespace StudentEmailApp.Forms
                     var pId = cmd.Parameters.Add("@id", SqlDbType.NVarChar, 50);
                     cmd.Parameters.Add("@user_name", SqlDbType.NVarChar, 100).Value = UserSession.CurrentUsername;
 
-                    // Read ONLY from dgvGenerated
-                    foreach (DataGridViewRow genRow in dgvGenerated.Rows)
+                    // Read ONLY from selected rows in dgvGenerated
+                    foreach (var genRow in selectedRows)
                     {
                         progressBar.Value++;
 
                         string status = genRow.Cells["colGenStatus"].Value?.ToString() ?? "";
                         string email = genRow.Cells["colGenEmail"].Value?.ToString() ?? "";
 
-                        // Save only records that haven't been saved yet
                         if (!string.IsNullOrWhiteSpace(email) && status != "Saved in DB")
                         {
                             pFirstName.Value = genRow.Cells["colGenFirstName"].Value?.ToString() ?? "";
@@ -313,7 +409,8 @@ namespace StudentEmailApp.Forms
                             cmd.ExecuteNonQuery();
 
                             genRow.Cells["colGenStatus"].Value = "Saved in DB";
-                            genRow.DefaultCellStyle.BackColor = Color.FromArgb(236, 253, 245); // Darker green
+                            genRow.Cells["colGenSelect"].Value = false; // uncheck after save
+                            genRow.DefaultCellStyle.BackColor = Color.FromArgb(236, 253, 245);
                             savedCount++;
                         }
                     }
@@ -326,17 +423,17 @@ namespace StudentEmailApp.Forms
                     throw;
                 }
 
-                // Insert log into SystemLogs
+                // Log action in SystemLogs
                 DbHelper.LogAction(
                     UserSession.CurrentUsername,
                     $"{UserSession.CurrentUsername} saved {savedCount} records to {_targetTable}"
                 );
 
-                btnSaveToDb.Enabled = false;
-                lblSelectionStats.Text = $"Saved {savedCount} records to {_targetTable} successfully.";
+                UpdateGeneratedSummary();
+                lblStatusAction.Text = $"Successfully saved {savedCount} records to {_targetTable}.";
 
                 MessageBox.Show(
-                    $"Successfully saved {savedCount} records to table '{_targetTable}' and logged to SystemLogs.",
+                    $"Successfully saved {savedCount} records into '{_targetTable}' and logged the transaction.",
                     "Save Successful",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information
@@ -344,65 +441,326 @@ namespace StudentEmailApp.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error saving records to database:\n{ex.Message}", "Database Error", 
+                MessageBox.Show($"Error saving records to database:\n{ex.Message}", "Database Save Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
-                btnSaveToDb.Enabled = true;
+                lblStatusAction.Text = "Database save error.";
             }
             finally
             {
                 progressBar.Visible = false;
-                btnSaveToDb.Text = "💾 Save to Database";
+                btnSaveToDb.Enabled = true;
+                btnSaveToDb.Text = "💾 Save Selected Mails";
             }
         }
-        #endregion
 
-        #region Helper Events
-        private void chkSelectAll_CheckedChanged(object sender, EventArgs e)
+        private void btnExportCsv_Click(object sender, EventArgs e)
         {
-            bool check = chkSelectAll.Checked;
-            foreach (DataGridViewRow row in dgvOriginal.Rows)
+            var selectedRows = GetSelectedGeneratedRows();
+
+            if (selectedRows.Count == 0)
             {
-                row.Cells["colOrigSelect"].Value = check;
+                MessageBox.Show("Please select at least one generated email row to export.", 
+                    "No Rows Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
-            UpdateSelectionSummary();
-        }
 
-        private void dgvOriginal_CellValueChanged(object sender, DataGridViewCellEventArgs e)
-        {
-            if (e.RowIndex >= 0 && e.ColumnIndex == colOrigSelect.Index)
+            using var sfd = new SaveFileDialog
             {
-                UpdateSelectionSummary();
-            }
-        }
+                Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+                FileName = $"StudentEmails_{_targetTable}_{DateTime.Now:yyyyMMdd_HHmm}.csv",
+                Title = "Export Generated Emails to CSV"
+            };
 
-        private void dgvOriginal_CurrentCellDirtyStateChanged(object sender, EventArgs e)
-        {
-            if (dgvOriginal.IsCurrentCellDirty && dgvOriginal.CurrentCell is DataGridViewCheckBoxCell)
+            if (sfd.ShowDialog() != DialogResult.OK)
+                return;
+
+            try
             {
-                dgvOriginal.CommitEdit(DataGridViewDataErrorContexts.Commit);
+                using var writer = new StreamWriter(sfd.FileName, false, Encoding.UTF8);
+
+                // CSV Header
+                writer.WriteLine("#,ID,Full Name,First Name,Last Name,Generated Email,Status");
+
+                int index = 0;
+                foreach (var row in selectedRows)
+                {
+                    index++;
+                    string id = EscapeCsv(row.Cells["colGenId"].Value?.ToString() ?? "");
+                    string fullName = EscapeCsv(row.Cells["colGenFullName"].Value?.ToString() ?? "");
+                    string firstName = EscapeCsv(row.Cells["colGenFirstName"].Value?.ToString() ?? "");
+                    string lastName = EscapeCsv(row.Cells["colGenLastName"].Value?.ToString() ?? "");
+                    string email = EscapeCsv(row.Cells["colGenEmail"].Value?.ToString() ?? "");
+                    string status = EscapeCsv(row.Cells["colGenStatus"].Value?.ToString() ?? "");
+
+                    writer.WriteLine($"{index},{id},{fullName},{firstName},{lastName},{email},{status}");
+                }
+
+                // Log export action in SystemLogs
+                DbHelper.LogAction(
+                    UserSession.CurrentUsername,
+                    $"{UserSession.CurrentUsername} exported {selectedRows.Count} generated emails to CSV ({Path.GetFileName(sfd.FileName)})"
+                );
+
+                lblStatusAction.Text = $"Exported {selectedRows.Count} records to CSV.";
+
+                var openPrompt = MessageBox.Show(
+                    $"Successfully exported {selectedRows.Count} rows to:\n{sfd.FileName}\n\nDo you want to open the file now?",
+                    "CSV Export Completed",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Information
+                );
+
+                if (openPrompt == DialogResult.Yes)
+                {
+                    Process.Start(new ProcessStartInfo(sfd.FileName) { UseShellExecute = true });
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to export CSV:\n{ex.Message}", "Export Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void UpdateSelectionSummary()
+        private void btnShowReport_Click(object sender, EventArgs e)
         {
-            int total = dgvOriginal.Rows.Count;
+            _printRows = GetSelectedGeneratedRows();
+
+            if (_printRows.Count == 0)
+            {
+                MessageBox.Show("Please select at least one row in the bottom grid to generate the report.", 
+                    "No Rows Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            _printRowIndex = 0;
+            _printPageNumber = 1;
+
+            try
+            {
+                using var printDoc = new PrintDocument();
+                printDoc.DocumentName = $"Student Emails Report - {_targetTitle}";
+                printDoc.DefaultPageSettings.Landscape = true;
+                printDoc.PrintPage += PrintDocument_PrintPage;
+
+                using var previewDlg = new PrintPreviewDialog
+                {
+                    Document = printDoc,
+                    Width = 960,
+                    Height = 650,
+                    StartPosition = FormStartPosition.CenterParent,
+                    Text = $"Report Preview — {_targetTitle} Emails ({_printRows.Count} records)"
+                };
+
+                lblStatusAction.Text = "Displaying Print Report Preview...";
+                previewDlg.ShowDialog();
+                lblStatusAction.Text = "Report Preview closed.";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error showing print report:\n{ex.Message}", "Report Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void PrintDocument_PrintPage(object sender, PrintPageEventArgs e)
+        {
+            if (e.Graphics == null) return;
+            Graphics g = e.Graphics;
+            int margin = 40;
+            int y = margin;
+            int pageWidth = e.PageBounds.Width - (margin * 2);
+
+            // Report Header
+            using var headerFont = new Font("Segoe UI", 16, FontStyle.Bold);
+            using var subFont = new Font("Segoe UI", 10, FontStyle.Regular);
+            using var boldFont = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            using var regularFont = new Font("Segoe UI", 9, FontStyle.Regular);
+
+            // Title
+            g.DrawString($"Student Email Generation Report — {_targetTitle}", headerFont, Brushes.Black, margin, y);
+            y += 32;
+
+            // Meta Info
+            string meta = $"Generated by: {UserSession.CurrentUsername}   |   Database Table: dbo.[{_targetTable}]   |   Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}   |   Total Rows: {_printRows.Count}";
+            g.DrawString(meta, subFont, Brushes.Gray, margin, y);
+            y += 26;
+
+            // Divider Line
+            g.DrawLine(Pens.LightGray, margin, y, margin + pageWidth, y);
+            y += 10;
+
+            // Table Column Widths (Landscape total ~1080px)
+            int colNumW = 40;
+            int colIdW = 90;
+            int colNameW = 260;
+            int colFirstW = 110;
+            int colLastW = 110;
+            int colMailW = 280;
+
+            // Draw Column Headers
+            g.FillRectangle(new SolidBrush(Color.FromArgb(241, 245, 249)), margin, y, pageWidth, 26);
+            g.DrawRectangle(Pens.LightGray, margin, y, pageWidth, 26);
+
+            int x = margin + 5;
+            g.DrawString("#", boldFont, Brushes.Black, x, y + 4); x += colNumW;
+            g.DrawString("ID", boldFont, Brushes.Black, x, y + 4); x += colIdW;
+            g.DrawString("Full English Name", boldFont, Brushes.Black, x, y + 4); x += colNameW;
+            g.DrawString("1st Name", boldFont, Brushes.Black, x, y + 4); x += colFirstW;
+            g.DrawString("2nd Name", boldFont, Brushes.Black, x, y + 4); x += colLastW;
+            g.DrawString("Generated Email", boldFont, Brushes.Black, x, y + 4); x += colMailW;
+            g.DrawString("Status", boldFont, Brushes.Black, x, y + 4);
+            y += 28;
+
+            int rowHeight = 24;
+
+            // Draw Table Rows
+            while (_printRowIndex < _printRows.Count)
+            {
+                // Check if page bounds exceeded
+                if (y + rowHeight > e.PageBounds.Height - margin - 30)
+                {
+                    e.HasMorePages = true;
+                    // Draw Footer Page Number
+                    g.DrawString($"Page {_printPageNumber}", regularFont, Brushes.Gray, margin + pageWidth - 60, e.PageBounds.Height - margin);
+                    _printPageNumber++;
+                    return;
+                }
+
+                var row = _printRows[_printRowIndex];
+                x = margin + 5;
+
+                // Alternating row background
+                if (_printRowIndex % 2 == 1)
+                {
+                    g.FillRectangle(new SolidBrush(Color.FromArgb(248, 250, 252)), margin, y, pageWidth, rowHeight);
+                }
+
+                string num = (_printRowIndex + 1).ToString();
+                string id = row.Cells["colGenId"].Value?.ToString() ?? "";
+                string fullName = row.Cells["colGenFullName"].Value?.ToString() ?? "";
+                string firstName = row.Cells["colGenFirstName"].Value?.ToString() ?? "";
+                string lastName = row.Cells["colGenLastName"].Value?.ToString() ?? "";
+                string email = row.Cells["colGenEmail"].Value?.ToString() ?? "";
+                string status = row.Cells["colGenStatus"].Value?.ToString() ?? "";
+
+                g.DrawString(num, regularFont, Brushes.Black, x, y + 4); x += colNumW;
+                g.DrawString(id, regularFont, Brushes.Black, x, y + 4); x += colIdW;
+                g.DrawString(Truncate(fullName, 32), regularFont, Brushes.Black, x, y + 4); x += colNameW;
+                g.DrawString(firstName, regularFont, Brushes.Black, x, y + 4); x += colFirstW;
+                g.DrawString(lastName, regularFont, Brushes.Black, x, y + 4); x += colLastW;
+                g.DrawString(email, boldFont, new SolidBrush(Color.FromArgb(15, 118, 110)), x, y + 4); x += colMailW;
+                g.DrawString(status, regularFont, Brushes.Black, x, y + 4);
+
+                // Row bottom line
+                g.DrawLine(Pens.Gainsboro, margin, y + rowHeight, margin + pageWidth, y + rowHeight);
+
+                y += rowHeight;
+                _printRowIndex++;
+            }
+
+            // Draw Footer on last page
+            g.DrawString($"Page {_printPageNumber} (End of Report)", regularFont, Brushes.Gray, margin + pageWidth - 140, e.PageBounds.Height - margin);
+            e.HasMorePages = false;
+        }
+
+        private void btnClearGenerated_Click(object sender, EventArgs e)
+        {
+            if (dgvGenerated.Rows.Count == 0) return;
+
+            var confirm = MessageBox.Show(
+                "Are you sure you want to clear all generated emails from the bottom list?",
+                "Confirm Clear",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+
+            if (confirm == DialogResult.Yes)
+            {
+                dgvGenerated.Rows.Clear();
+                UpdateGeneratedSummary();
+                lblStatusAction.Text = "Generated emails list cleared.";
+            }
+        }
+
+        private void chkSelectAllGen_CheckedChanged(object sender, EventArgs e)
+        {
+            bool check = chkSelectAllGen.Checked;
+            foreach (DataGridViewRow row in dgvGenerated.Rows)
+            {
+                row.Cells["colGenSelect"].Value = check;
+            }
+            UpdateGeneratedSummary();
+        }
+
+        private void dgvGenerated_CellValueChanged(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex >= 0 && e.ColumnIndex == colGenSelect.Index)
+            {
+                UpdateGeneratedSummary();
+            }
+        }
+
+        private void dgvGenerated_CurrentCellDirtyStateChanged(object sender, EventArgs e)
+        {
+            if (dgvGenerated.IsCurrentCellDirty && dgvGenerated.CurrentCell is DataGridViewCheckBoxCell)
+            {
+                dgvGenerated.CommitEdit(DataGridViewDataErrorContexts.Commit);
+            }
+        }
+
+        private void UpdateGeneratedSummary()
+        {
+            int total = dgvGenerated.Rows.Count;
             int selected = 0;
 
-            foreach (DataGridViewRow row in dgvOriginal.Rows)
+            foreach (DataGridViewRow row in dgvGenerated.Rows)
             {
-                if (Convert.ToBoolean(row.Cells["colOrigSelect"].Value ?? false))
+                if (Convert.ToBoolean(row.Cells["colGenSelect"].Value ?? false))
                     selected++;
             }
 
-            lblRawCount.Text = $"({total} uploaded | {selected} sel)";
-            lblSelectionStats.Text = $"Original Rows: {total} | Selected for generation: {selected}";
-            btnCreateEmails.Enabled = selected > 0;
+            lblGeneratedCount.Text = $"Generated Emails: {total} ({selected} selected)";
+            btnSaveToDb.Enabled = selected > 0;
+            btnExportCsv.Enabled = selected > 0;
+            btnShowReport.Enabled = selected > 0;
+            btnClearGenerated.Enabled = total > 0;
+        }
+
+        private List<DataGridViewRow> GetSelectedGeneratedRows()
+        {
+            var list = new List<DataGridViewRow>();
+            foreach (DataGridViewRow row in dgvGenerated.Rows)
+            {
+                if (Convert.ToBoolean(row.Cells["colGenSelect"].Value ?? false))
+                {
+                    list.Add(row);
+                }
+            }
+            return list;
+        }
+
+        private static string EscapeCsv(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return "";
+            if (value.Contains(",") || value.Contains("\"") || value.Contains("\n") || value.Contains("\r"))
+            {
+                return $"\"{value.Replace("\"", "\"\"")}\"";
+            }
+            return value;
+        }
+
+        private static string Truncate(string val, int maxLen)
+        {
+            if (string.IsNullOrEmpty(val)) return "";
+            return val.Length <= maxLen ? val : val.Substring(0, maxLen - 2) + "..";
         }
 
         private void btnBack_Click(object sender, EventArgs e)
         {
             this.Close();
         }
+
         #endregion
     }
 }
