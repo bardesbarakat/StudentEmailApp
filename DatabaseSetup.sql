@@ -30,7 +30,7 @@ GO
 -- Seed test users
 INSERT INTO dbo.Users (Username, Password)
 VALUES 
-    (N'admin', N'admin123'),
+    (N'admin', N'123'),
     (N'staff', N'staff123'),
     (N'registrar', N'pass123');
 GO

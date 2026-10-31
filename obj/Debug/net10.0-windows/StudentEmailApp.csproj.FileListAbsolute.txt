@@ -54,3 +54,4 @@ D:\studentEmails\StudentEmailApp\obj\Debug\net10.0-windows\StudentEmailApp.pdb
 D:\studentEmails\StudentEmailApp\obj\Debug\net10.0-windows\StudentEmailApp.genruntimeconfig.cache
 D:\studentEmails\StudentEmailApp\obj\Debug\net10.0-windows\ref\StudentEmailApp.dll
 D:\studentEmails\StudentEmailApp\bin\Debug\net10.0-windows\StudentEmailApp.dll.config
+D:\studentEmails\StudentEmailApp\obj\Debug\net10.0-windows\StudentEmailApp.sourcelink.json

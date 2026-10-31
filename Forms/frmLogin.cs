@@ -1,6 +1,7 @@
 using System;
-using System.Drawing;
+using System.Data;
 using System.Windows.Forms;
+using Microsoft.Data.SqlClient;
 using StudentEmailApp.Models;
 using StudentEmailApp.Services;
 
@@ -8,6 +9,9 @@ namespace StudentEmailApp.Forms
 {
     public partial class frmLogin : Form
     {
+        // Connection string pointing to the SQL Server database "StudentMails"
+        private readonly string connectionString = DbHelper.ConnectionString;
+
         public frmLogin()
         {
             InitializeComponent();
@@ -18,9 +22,10 @@ namespace StudentEmailApp.Forms
             string username = txtUsername.Text.Trim();
             string password = txtPassword.Text;
 
-            // Clear previous error
+            // Clear any previous error message
             lblError.Text = "";
 
+            // 1. Validate inputs
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
                 lblError.Text = "Please enter both username and password.";
@@ -32,39 +37,83 @@ namespace StudentEmailApp.Forms
 
             try
             {
-                // Validate credentials against SQL Server "Users" table
-                bool isValid = DbHelper.ValidateUser(username, password, out int userId);
+                // 2. Connect to SQL Server and validate credentials against "Users" table
+                bool isAuthenticated = false;
 
-                if (isValid)
+                using (SqlConnection conn = new SqlConnection(connectionString))
                 {
-                    // 1. Save username in static session variable
-                    UserSession.CurrentUsername = username;
-                    UserSession.CurrentUserId = userId;
+                    conn.Open();
 
-                    // 2. Insert record into SystemLogs table
-                    DbHelper.LogAction(username, $"{username} logged in");
+                    // Parameterized SQL query to prevent SQL Injection
+                    const string query = "SELECT UserID, Username, Password FROM dbo.Users WHERE Username = @Username";
 
-                    // 3. Open Form 2 (frmSelectTarget)
-                    this.Hide();
-                    using var selectForm = new frmSelectTarget();
-                    selectForm.ShowDialog();
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.Add("@Username", SqlDbType.NVarChar, 100).Value = username;
 
-                    // If user returns/logs out, clear fields and show login again
-                    txtPassword.Clear();
-                    lblError.Text = "";
-                    this.Show();
-                    txtUsername.Focus();
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                string dbPassword = reader["Password"]?.ToString() ?? "";
+
+                                // Compare entered password with database password
+                                if (dbPassword == password)
+                                {
+                                    isAuthenticated = true;
+                                    UserSession.CurrentUserId = Convert.ToInt32(reader["UserID"]);
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. If authenticated: save session, log to SystemLogs, and open Form 2
+                    if (isAuthenticated)
+                    {
+                        // Save username globally in static variable
+                        UserSession.CurrentUsername = username;
+
+                        // Insert audit trail into "SystemLogs"
+                        const string logQuery = @"
+                            INSERT INTO dbo.SystemLogs (Username, ActionTime, ActionDescription) 
+                            VALUES (@Username, GETDATE(), @ActionDescription)";
+
+                        using (SqlCommand logCmd = new SqlCommand(logQuery, conn))
+                        {
+                            logCmd.Parameters.Add("@Username", SqlDbType.NVarChar, 100).Value = username;
+                            logCmd.Parameters.Add("@ActionDescription", SqlDbType.NVarChar, 1000).Value = $"{username} logged in";
+                            logCmd.ExecuteNonQuery();
+                        }
+
+                        // Hide Form 1 and display Form 2 (Target Selection)
+                        this.Hide();
+                        using (frmSelectTarget selectForm = new frmSelectTarget())
+                        {
+                            selectForm.ShowDialog();
+                        }
+
+                        // Reset password and restore login form when user logs out
+                        txtPassword.Clear();
+                        lblError.Text = "";
+                        this.Show();
+                        txtUsername.Focus();
+                    }
+                    else
+                    {
+                        // Invalid credentials: display error message
+                        lblError.Text = "Invalid username or password. Please try again.";
+                        txtPassword.Clear();
+                        txtPassword.Focus();
+                    }
                 }
-                else
-                {
-                    lblError.Text = "Invalid username or password. Please try again.";
-                    txtPassword.Clear();
-                    txtPassword.Focus();
-                }
+            }
+            catch (SqlException sqlEx)
+            {
+                lblError.Text = $"Database Connection Error:\n{sqlEx.Message}";
             }
             catch (Exception ex)
             {
-                lblError.Text = $"Database Connection Error:\n{ex.Message}";
+                lblError.Text = $"An error occurred:\n{ex.Message}";
             }
             finally
             {
