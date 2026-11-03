@@ -6,11 +6,13 @@ namespace StudentEmailApp.Models
     public static class UserSession
     {
         public static string CurrentUsername { get; set; } = "Guest";
+        public static string CurrentUserRole { get; set; } = "Admin";
         public static int CurrentUserId { get; set; } = 0;
 
         public static void Clear()
         {
             CurrentUsername = "Guest";
+            CurrentUserRole = "Admin";
             CurrentUserId = 0;
         }
     }

@@ -23,16 +23,17 @@ GO
 CREATE TABLE dbo.Users (
     UserID INT IDENTITY(1,1) PRIMARY KEY,
     Username NVARCHAR(100) NOT NULL UNIQUE,
-    Password NVARCHAR(255) NOT NULL
+    Password NVARCHAR(255) NOT NULL,
+    UserRole NVARCHAR(50) NOT NULL DEFAULT N'Admin'
 );
 GO
 
--- Seed test users
-INSERT INTO dbo.Users (Username, Password)
+-- Seed test users with roles (Admin, Undergrad, Postgrad)
+INSERT INTO dbo.Users (Username, Password, UserRole)
 VALUES 
-    (N'admin', N'123'),
-    (N'staff', N'staff123'),
-    (N'registrar', N'pass123');
+    (N'admin', N'123', N'Admin'),
+    (N'staff', N'staff123', N'Undergrad'),
+    (N'registrar', N'pass123', N'Postgrad');
 GO
 
 -- ==========================================================

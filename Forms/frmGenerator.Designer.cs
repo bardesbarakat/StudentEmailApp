@@ -10,6 +10,12 @@ namespace StudentEmailApp.Forms
         private System.Windows.Forms.Label lblTargetTableInfo;
         private System.Windows.Forms.Button btnBack;
 
+        // Step GroupBoxes (Fool-Proof Beginner UI Flow)
+        private System.Windows.Forms.GroupBox grpStep1;
+        private System.Windows.Forms.GroupBox grpStep2;
+        private System.Windows.Forms.GroupBox grpStep3;
+        private System.Windows.Forms.Panel pnlMiddleGenerateBar;
+
         // Excel Controls Section
         private System.Windows.Forms.Panel pnlExcelControls;
         private System.Windows.Forms.Label lblExcelPath;
@@ -34,6 +40,9 @@ namespace StudentEmailApp.Forms
         private System.Windows.Forms.DataGridViewTextBoxColumn colOrigIndex;
         private System.Windows.Forms.DataGridViewTextBoxColumn colOrigId;
         private System.Windows.Forms.DataGridViewTextBoxColumn colOrigFullName;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colOrigCollege;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colOrigDept;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colOrigCode;
         private System.Windows.Forms.DataGridViewTextBoxColumn colOrigStatus;
 
         // Panel 2 (Bottom Grid: dgvGenerated)
@@ -49,6 +58,9 @@ namespace StudentEmailApp.Forms
         private System.Windows.Forms.DataGridViewTextBoxColumn colGenFullName;
         private System.Windows.Forms.DataGridViewTextBoxColumn colGenFirstName;
         private System.Windows.Forms.DataGridViewTextBoxColumn colGenLastName;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colGenCollege;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colGenDept;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colGenCode;
         private System.Windows.Forms.DataGridViewTextBoxColumn colGenEmail;
         private System.Windows.Forms.DataGridViewTextBoxColumn colGenStatus;
 
@@ -87,6 +99,10 @@ namespace StudentEmailApp.Forms
             this.btnBack = new System.Windows.Forms.Button();
             this.lblTargetTableInfo = new System.Windows.Forms.Label();
             this.lblTargetTitle = new System.Windows.Forms.Label();
+            this.grpStep1 = new System.Windows.Forms.GroupBox();
+            this.grpStep2 = new System.Windows.Forms.GroupBox();
+            this.grpStep3 = new System.Windows.Forms.GroupBox();
+            this.pnlMiddleGenerateBar = new System.Windows.Forms.Panel();
             this.pnlExcelControls = new System.Windows.Forms.Panel();
             this.txtDomain = new System.Windows.Forms.TextBox();
             this.lblDomain = new System.Windows.Forms.Label();
@@ -101,6 +117,9 @@ namespace StudentEmailApp.Forms
             this.colOrigIndex = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colOrigId = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colOrigFullName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colOrigCollege = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colOrigDept = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colOrigCode = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colOrigStatus = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.pnlOrigHeader = new System.Windows.Forms.Panel();
             this.btnCreateEmails = new System.Windows.Forms.Button();
@@ -114,6 +133,9 @@ namespace StudentEmailApp.Forms
             this.colGenFullName = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colGenFirstName = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colGenLastName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colGenCollege = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colGenDept = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colGenCode = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colGenEmail = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colGenStatus = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.pnlGenHeader = new System.Windows.Forms.Panel();
@@ -203,10 +225,26 @@ namespace StudentEmailApp.Forms
             this.lblTargetTitle.Text = "Student Email Generator Studio";
 
             // 
+            // grpStep1 (الخطوة 1: رفع الملف)
+            // 
+            this.grpStep1.BackColor = System.Drawing.Color.White;
+            this.grpStep1.Controls.Add(this.pnlExcelControls);
+            this.grpStep1.Dock = System.Windows.Forms.DockStyle.Top;
+            this.grpStep1.Font = new System.Drawing.Font("Segoe UI Semibold", 10F, System.Drawing.FontStyle.Bold);
+            this.grpStep1.ForeColor = System.Drawing.Color.FromArgb(15, 23, 42);
+            this.grpStep1.Location = new System.Drawing.Point(0, 56);
+            this.grpStep1.Name = "grpStep1";
+            this.grpStep1.Padding = new System.Windows.Forms.Padding(8, 4, 8, 6);
+            this.grpStep1.Size = new System.Drawing.Size(1150, 82);
+            this.grpStep1.TabIndex = 1;
+            this.grpStep1.TabStop = false;
+            this.grpStep1.Text = "الخطوة 1: رفع الملف";
+
+            // 
             // pnlExcelControls
             // 
             this.pnlExcelControls.BackColor = System.Drawing.Color.White;
-            this.pnlExcelControls.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pnlExcelControls.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.pnlExcelControls.Controls.Add(this.txtDomain);
             this.pnlExcelControls.Controls.Add(this.lblDomain);
             this.pnlExcelControls.Controls.Add(this.btnClearOriginal);
@@ -214,10 +252,10 @@ namespace StudentEmailApp.Forms
             this.pnlExcelControls.Controls.Add(this.btnBrowse);
             this.pnlExcelControls.Controls.Add(this.txtExcelPath);
             this.pnlExcelControls.Controls.Add(this.lblExcelPath);
-            this.pnlExcelControls.Dock = System.Windows.Forms.DockStyle.Top;
-            this.pnlExcelControls.Location = new System.Drawing.Point(0, 56);
+            this.pnlExcelControls.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.pnlExcelControls.Location = new System.Drawing.Point(8, 23);
             this.pnlExcelControls.Name = "pnlExcelControls";
-            this.pnlExcelControls.Size = new System.Drawing.Size(1150, 58);
+            this.pnlExcelControls.Size = new System.Drawing.Size(1134, 53);
             this.pnlExcelControls.TabIndex = 1;
 
             // 
@@ -325,45 +363,80 @@ namespace StudentEmailApp.Forms
             this.txtDomain.TabIndex = 6;
 
             // 
-            // splitMain (Horizontal Split: Top = Original, Bottom = Generated)
+            // splitMain (Horizontal Split: Top = Step 2, Bottom = Step 3)
             // 
             this.splitMain.BackColor = System.Drawing.Color.FromArgb(203, 213, 225);
             this.splitMain.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitMain.Location = new System.Drawing.Point(0, 114);
+            this.splitMain.Location = new System.Drawing.Point(0, 138);
             this.splitMain.Name = "splitMain";
             this.splitMain.Orientation = System.Windows.Forms.Orientation.Horizontal;
 
             // 
-            // splitMain.Panel1 (Top: dgvOriginal)
+            // splitMain.Panel1 (Top: grpStep2 -> dgvOriginal)
             // 
             this.splitMain.Panel1.BackColor = System.Drawing.Color.White;
-            this.splitMain.Panel1.Controls.Add(this.dgvOriginal);
-            this.splitMain.Panel1.Controls.Add(this.pnlOrigHeader);
+            this.splitMain.Panel1.Controls.Add(this.grpStep2);
+            this.splitMain.Panel1.Padding = new System.Windows.Forms.Padding(6, 4, 6, 2);
 
             // 
-            // splitMain.Panel2 (Bottom: dgvGenerated)
+            // grpStep2 (الخطوة 2: إنشاء الإيميلات)
+            // 
+            this.grpStep2.BackColor = System.Drawing.Color.White;
+            this.grpStep2.Controls.Add(this.dgvOriginal);
+            this.grpStep2.Controls.Add(this.pnlMiddleGenerateBar);
+            this.grpStep2.Controls.Add(this.pnlOrigHeader);
+            this.grpStep2.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.grpStep2.Font = new System.Drawing.Font("Segoe UI Semibold", 10F, System.Drawing.FontStyle.Bold);
+            this.grpStep2.ForeColor = System.Drawing.Color.FromArgb(15, 23, 42);
+            this.grpStep2.Location = new System.Drawing.Point(6, 4);
+            this.grpStep2.Name = "grpStep2";
+            this.grpStep2.Padding = new System.Windows.Forms.Padding(6, 4, 6, 6);
+            this.grpStep2.Size = new System.Drawing.Size(1138, 250);
+            this.grpStep2.TabIndex = 0;
+            this.grpStep2.TabStop = false;
+            this.grpStep2.Text = "الخطوة 2: إنشاء الإيميلات";
+
+            // 
+            // splitMain.Panel2 (Bottom: grpStep3 -> dgvGenerated + Save)
             // 
             this.splitMain.Panel2.BackColor = System.Drawing.Color.White;
-            this.splitMain.Panel2.Controls.Add(this.dgvGenerated);
-            this.splitMain.Panel2.Controls.Add(this.pnlGenHeader);
-            this.splitMain.Size = new System.Drawing.Size(1150, 540);
-            this.splitMain.SplitterDistance = 260;
+            this.splitMain.Panel2.Controls.Add(this.grpStep3);
+            this.splitMain.Panel2.Padding = new System.Windows.Forms.Padding(6, 2, 6, 4);
+            this.splitMain.Size = new System.Drawing.Size(1150, 572);
+            this.splitMain.SplitterDistance = 285;
             this.splitMain.SplitterWidth = 6;
             this.splitMain.TabIndex = 2;
+
+            // 
+            // grpStep3 (الخطوة 3: الحفظ)
+            // 
+            this.grpStep3.BackColor = System.Drawing.Color.White;
+            this.grpStep3.Controls.Add(this.dgvGenerated);
+            this.grpStep3.Controls.Add(this.pnlGenHeader);
+            this.grpStep3.Controls.Add(this.pnlBottomActions);
+            this.grpStep3.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.grpStep3.Font = new System.Drawing.Font("Segoe UI Semibold", 10F, System.Drawing.FontStyle.Bold);
+            this.grpStep3.ForeColor = System.Drawing.Color.FromArgb(15, 23, 42);
+            this.grpStep3.Location = new System.Drawing.Point(6, 2);
+            this.grpStep3.Name = "grpStep3";
+            this.grpStep3.Padding = new System.Windows.Forms.Padding(6, 4, 6, 6);
+            this.grpStep3.Size = new System.Drawing.Size(1138, 300);
+            this.grpStep3.TabIndex = 0;
+            this.grpStep3.TabStop = false;
+            this.grpStep3.Text = "الخطوة 3: الحفظ";
 
             // 
             // pnlOrigHeader
             // 
             this.pnlOrigHeader.BackColor = System.Drawing.Color.FromArgb(248, 250, 252);
             this.pnlOrigHeader.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pnlOrigHeader.Controls.Add(this.btnCreateEmails);
             this.pnlOrigHeader.Controls.Add(this.chkSelectAllOrig);
             this.pnlOrigHeader.Controls.Add(this.lblOriginalCount);
             this.pnlOrigHeader.Controls.Add(this.lblOrigTitle);
             this.pnlOrigHeader.Dock = System.Windows.Forms.DockStyle.Top;
             this.pnlOrigHeader.Location = new System.Drawing.Point(0, 0);
             this.pnlOrigHeader.Name = "pnlOrigHeader";
-            this.pnlOrigHeader.Size = new System.Drawing.Size(1150, 42);
+            this.pnlOrigHeader.Size = new System.Drawing.Size(1150, 38);
             this.pnlOrigHeader.TabIndex = 0;
 
             // 
@@ -372,11 +445,11 @@ namespace StudentEmailApp.Forms
             this.lblOrigTitle.AutoSize = true;
             this.lblOrigTitle.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
             this.lblOrigTitle.ForeColor = System.Drawing.Color.FromArgb(30, 41, 59);
-            this.lblOrigTitle.Location = new System.Drawing.Point(12, 10);
+            this.lblOrigTitle.Location = new System.Drawing.Point(12, 9);
             this.lblOrigTitle.Name = "lblOrigTitle";
             this.lblOrigTitle.Size = new System.Drawing.Size(183, 19);
             this.lblOrigTitle.TabIndex = 0;
-            this.lblOrigTitle.Text = "📥 Loaded Students (Raw)";
+            this.lblOrigTitle.Text = "📥 بيانات الطلاب المرفوعة من الإكسيل";
 
             // 
             // lblOriginalCount
@@ -384,11 +457,11 @@ namespace StudentEmailApp.Forms
             this.lblOriginalCount.AutoSize = true;
             this.lblOriginalCount.Font = new System.Drawing.Font("Segoe UI", 9.5F);
             this.lblOriginalCount.ForeColor = System.Drawing.Color.FromArgb(100, 116, 139);
-            this.lblOriginalCount.Location = new System.Drawing.Point(205, 11);
+            this.lblOriginalCount.Location = new System.Drawing.Point(260, 10);
             this.lblOriginalCount.Name = "lblOriginalCount";
             this.lblOriginalCount.Size = new System.Drawing.Size(193, 17);
             this.lblOriginalCount.TabIndex = 1;
-            this.lblOriginalCount.Text = "Loaded Students: 0 (0 selected)";
+            this.lblOriginalCount.Text = "عدد الطلاب: 0 (المحدد: 0)";
 
             // 
             // chkSelectAllOrig
@@ -399,30 +472,42 @@ namespace StudentEmailApp.Forms
             this.chkSelectAllOrig.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chkSelectAllOrig.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold);
             this.chkSelectAllOrig.ForeColor = System.Drawing.Color.FromArgb(51, 65, 85);
-            this.chkSelectAllOrig.Location = new System.Drawing.Point(825, 12);
+            this.chkSelectAllOrig.Location = new System.Drawing.Point(1015, 9);
             this.chkSelectAllOrig.Name = "chkSelectAllOrig";
-            this.chkSelectAllOrig.Size = new System.Drawing.Size(75, 19);
+            this.chkSelectAllOrig.Size = new System.Drawing.Size(95, 19);
             this.chkSelectAllOrig.TabIndex = 2;
-            this.chkSelectAllOrig.Text = "Select All";
+            this.chkSelectAllOrig.Text = "تحديد الكل";
             this.chkSelectAllOrig.UseVisualStyleBackColor = true;
             this.chkSelectAllOrig.CheckedChanged += new System.EventHandler(this.chkSelectAllOrig_CheckedChanged);
 
             // 
-            // btnCreateEmails
+            // pnlMiddleGenerateBar (Directly below dgvOriginal and above dgvGenerated)
             // 
-            this.btnCreateEmails.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.pnlMiddleGenerateBar.BackColor = System.Drawing.Color.FromArgb(241, 245, 249);
+            this.pnlMiddleGenerateBar.Controls.Add(this.btnCreateEmails);
+            this.pnlMiddleGenerateBar.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.pnlMiddleGenerateBar.Location = new System.Drawing.Point(6, 200);
+            this.pnlMiddleGenerateBar.Name = "pnlMiddleGenerateBar";
+            this.pnlMiddleGenerateBar.Padding = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.pnlMiddleGenerateBar.Size = new System.Drawing.Size(1126, 44);
+            this.pnlMiddleGenerateBar.TabIndex = 3;
+
+            // 
+            // btnCreateEmails (Horizontally across the middle of the form)
+            // 
             this.btnCreateEmails.BackColor = System.Drawing.Color.FromArgb(37, 99, 235);
             this.btnCreateEmails.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnCreateEmails.Dock = System.Windows.Forms.DockStyle.Fill;
             this.btnCreateEmails.Enabled = false;
             this.btnCreateEmails.FlatAppearance.BorderSize = 0;
             this.btnCreateEmails.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnCreateEmails.Font = new System.Drawing.Font("Segoe UI Semibold", 9.5F, System.Drawing.FontStyle.Bold);
+            this.btnCreateEmails.Font = new System.Drawing.Font("Segoe UI Semibold", 10.5F, System.Drawing.FontStyle.Bold);
             this.btnCreateEmails.ForeColor = System.Drawing.Color.White;
-            this.btnCreateEmails.Location = new System.Drawing.Point(920, 6);
+            this.btnCreateEmails.Location = new System.Drawing.Point(4, 5);
             this.btnCreateEmails.Name = "btnCreateEmails";
-            this.btnCreateEmails.Size = new System.Drawing.Size(215, 30);
+            this.btnCreateEmails.Size = new System.Drawing.Size(1118, 34);
             this.btnCreateEmails.TabIndex = 3;
-            this.btnCreateEmails.Text = "⚡ Create selected Mails ↓";
+            this.btnCreateEmails.Text = "⚡ إنشاء الإيميلات للطلاب المحددين ↓";
             this.btnCreateEmails.UseVisualStyleBackColor = false;
             this.btnCreateEmails.Click += new System.EventHandler(this.btnCreateEmails_Click);
 
@@ -444,6 +529,9 @@ namespace StudentEmailApp.Forms
             this.colOrigIndex,
             this.colOrigId,
             this.colOrigFullName,
+            this.colOrigCollege,
+            this.colOrigDept,
+            this.colOrigCode,
             this.colOrigStatus});
             dgvRow1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
             dgvRow1.BackColor = System.Drawing.Color.White;
@@ -469,7 +557,7 @@ namespace StudentEmailApp.Forms
             // 
             this.colOrigSelect.HeaderText = "Select";
             this.colOrigSelect.Name = "colOrigSelect";
-            this.colOrigSelect.Width = 60;
+            this.colOrigSelect.Width = 55;
 
             // 
             // colOrigIndex
@@ -477,23 +565,47 @@ namespace StudentEmailApp.Forms
             this.colOrigIndex.HeaderText = "#";
             this.colOrigIndex.Name = "colOrigIndex";
             this.colOrigIndex.ReadOnly = true;
-            this.colOrigIndex.Width = 50;
+            this.colOrigIndex.Width = 45;
 
             // 
             // colOrigId
             // 
-            this.colOrigId.HeaderText = "ID (Col 0)";
+            this.colOrigId.HeaderText = "National ID / الرقم القومي";
             this.colOrigId.Name = "colOrigId";
             this.colOrigId.ReadOnly = true;
-            this.colOrigId.Width = 140;
+            this.colOrigId.Width = 155;
 
             // 
             // colOrigFullName
             // 
             this.colOrigFullName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.colOrigFullName.HeaderText = "Full English Name (Col 1)";
+            this.colOrigFullName.HeaderText = "Full English Name";
             this.colOrigFullName.Name = "colOrigFullName";
             this.colOrigFullName.ReadOnly = true;
+
+            // 
+            // colOrigCollege
+            // 
+            this.colOrigCollege.HeaderText = "College / الكلية";
+            this.colOrigCollege.Name = "colOrigCollege";
+            this.colOrigCollege.ReadOnly = true;
+            this.colOrigCollege.Width = 130;
+
+            // 
+            // colOrigDept
+            // 
+            this.colOrigDept.HeaderText = "Dept / القسم";
+            this.colOrigDept.Name = "colOrigDept";
+            this.colOrigDept.ReadOnly = true;
+            this.colOrigDept.Width = 120;
+
+            // 
+            // colOrigCode
+            // 
+            this.colOrigCode.HeaderText = "Code / الكود";
+            this.colOrigCode.Name = "colOrigCode";
+            this.colOrigCode.ReadOnly = true;
+            this.colOrigCode.Width = 100;
 
             // 
             // colOrigStatus
@@ -501,7 +613,7 @@ namespace StudentEmailApp.Forms
             this.colOrigStatus.HeaderText = "Status";
             this.colOrigStatus.Name = "colOrigStatus";
             this.colOrigStatus.ReadOnly = true;
-            this.colOrigStatus.Width = 120;
+            this.colOrigStatus.Width = 210;
 
             // 
             // pnlGenHeader
@@ -597,6 +709,9 @@ namespace StudentEmailApp.Forms
             this.colGenFullName,
             this.colGenFirstName,
             this.colGenLastName,
+            this.colGenCollege,
+            this.colGenDept,
+            this.colGenCode,
             this.colGenEmail,
             this.colGenStatus});
             dgvRow2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
@@ -623,7 +738,7 @@ namespace StudentEmailApp.Forms
             // 
             this.colGenSelect.HeaderText = "Select";
             this.colGenSelect.Name = "colGenSelect";
-            this.colGenSelect.Width = 60;
+            this.colGenSelect.Width = 55;
 
             // 
             // colGenIndex
@@ -636,10 +751,10 @@ namespace StudentEmailApp.Forms
             // 
             // colGenId
             // 
-            this.colGenId.HeaderText = "ID";
+            this.colGenId.HeaderText = "National ID (id)";
             this.colGenId.Name = "colGenId";
             this.colGenId.ReadOnly = true;
-            this.colGenId.Width = 90;
+            this.colGenId.Width = 135;
 
             // 
             // colGenFullName
@@ -647,7 +762,7 @@ namespace StudentEmailApp.Forms
             this.colGenFullName.HeaderText = "Full English Name";
             this.colGenFullName.Name = "colGenFullName";
             this.colGenFullName.ReadOnly = true;
-            this.colGenFullName.Width = 200;
+            this.colGenFullName.Width = 180;
 
             // 
             // colGenFirstName
@@ -655,7 +770,7 @@ namespace StudentEmailApp.Forms
             this.colGenFirstName.HeaderText = "1st Name";
             this.colGenFirstName.Name = "colGenFirstName";
             this.colGenFirstName.ReadOnly = true;
-            this.colGenFirstName.Width = 95;
+            this.colGenFirstName.Width = 85;
 
             // 
             // colGenLastName
@@ -663,7 +778,31 @@ namespace StudentEmailApp.Forms
             this.colGenLastName.HeaderText = "2nd Name";
             this.colGenLastName.Name = "colGenLastName";
             this.colGenLastName.ReadOnly = true;
-            this.colGenLastName.Width = 95;
+            this.colGenLastName.Width = 85;
+
+            // 
+            // colGenCollege
+            // 
+            this.colGenCollege.HeaderText = "College";
+            this.colGenCollege.Name = "colGenCollege";
+            this.colGenCollege.ReadOnly = true;
+            this.colGenCollege.Width = 110;
+
+            // 
+            // colGenDept
+            // 
+            this.colGenDept.HeaderText = "Dept";
+            this.colGenDept.Name = "colGenDept";
+            this.colGenDept.ReadOnly = true;
+            this.colGenDept.Width = 100;
+
+            // 
+            // colGenCode
+            // 
+            this.colGenCode.HeaderText = "Code";
+            this.colGenCode.Name = "colGenCode";
+            this.colGenCode.ReadOnly = true;
+            this.colGenCode.Width = 90;
 
             // 
             // colGenEmail
@@ -749,6 +888,7 @@ namespace StudentEmailApp.Forms
             this.btnSaveToDb.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnSaveToDb.BackColor = System.Drawing.Color.FromArgb(15, 118, 110);
             this.btnSaveToDb.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnSaveToDb.Enabled = false;
             this.btnSaveToDb.FlatAppearance.BorderSize = 0;
             this.btnSaveToDb.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnSaveToDb.Font = new System.Drawing.Font("Segoe UI Semibold", 10F, System.Drawing.FontStyle.Bold);
@@ -757,7 +897,7 @@ namespace StudentEmailApp.Forms
             this.btnSaveToDb.Name = "btnSaveToDb";
             this.btnSaveToDb.Size = new System.Drawing.Size(250, 38);
             this.btnSaveToDb.TabIndex = 2;
-            this.btnSaveToDb.Text = "💾 Save Selected Mails";
+            this.btnSaveToDb.Text = "💾 حفظ الإيميلات (Save)";
             this.btnSaveToDb.UseVisualStyleBackColor = false;
             this.btnSaveToDb.Click += new System.EventHandler(this.btnSaveToDb_Click);
 
@@ -815,8 +955,8 @@ namespace StudentEmailApp.Forms
             // 
             this.lblStatusAction.ForeColor = System.Drawing.Color.FromArgb(100, 116, 139);
             this.lblStatusAction.Name = "lblStatusAction";
-            this.lblStatusAction.Size = new System.Drawing.Size(39, 19);
-            this.lblStatusAction.Text = "Ready";
+            this.lblStatusAction.Size = new System.Drawing.Size(130, 19);
+            this.lblStatusAction.Text = "في انتظار رفع الملف...";
 
             // 
             // frmGenerator
@@ -826,14 +966,14 @@ namespace StudentEmailApp.Forms
             this.BackColor = System.Drawing.Color.FromArgb(248, 250, 252);
             this.ClientSize = new System.Drawing.Size(1150, 734);
             this.Controls.Add(this.splitMain);
-            this.Controls.Add(this.pnlBottomActions);
             this.Controls.Add(this.statusStrip);
-            this.Controls.Add(this.pnlExcelControls);
+            this.Controls.Add(this.grpStep1);
             this.Controls.Add(this.pnlTopBar);
             this.MinimumSize = new System.Drawing.Size(1000, 650);
             this.Name = "frmGenerator";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Student Email Generator Studio";
+            this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
             this.Load += new System.EventHandler(this.frmGenerator_Load);
             this.pnlTopBar.ResumeLayout(false);
             this.pnlTopBar.PerformLayout();
